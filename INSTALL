@@ -1,0 +1,9 @@
+Building MaryJaneCoin
+
+See doc/readme-qt.rst for instructions on building MaryJaneCoin QT,
+the intended-for-end-users, nice-graphical-interface, reference
+implementation of MaryJaneCoin.
+
+See doc/build-*.txt for instructions on building maryjanecoind,
+the intended-for-services, no-graphical-interface, reference
+implementation of MaryJaneCoin.
