@@ -142,7 +142,7 @@ class Benchmark {
   Histogram hist_;
   RandomGenerator gen_;
   Random rand_;
-  kyotocabinet::LZOCompressor<kyotocabinet::LZO::MARYJ> comp_;
+  kyotocabinet::LZOCompressor<kyotocabinet::LZO::RAW> comp_;
 
   // State kept for progress messages
   int done_;
