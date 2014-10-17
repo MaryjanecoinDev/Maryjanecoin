@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2014 Dicecoin developers (https://github.com/gaodaochu/dicecoin/blob/ca91e22a754ff8723d21a2edc8279c95eb8b08fa/src/main.cpp)
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -314,6 +315,27 @@ bool CTransaction::IsStandard() const
         if (fEnforceCanonical && !txin.scriptSig.HasCanonicalPushes()) {
             return false;
         }
+
+        // ban c-cex improperly created burn address
+        // from https://github.com/gaodaochu/dicecoin/commit/ca91e22a754ff8723d21a2edc8279c95eb8b08fa
+        // adapted by earlz
+        static const CBitcoinAddress scamWallet1 ("MTwV9vvc345r2z97PLNJH3pzKJm1D78ZzH");
+        uint256 hashBlock;
+        CTransaction txPrev;
+        if(GetTransaction(txin.prevout.hash, txPrev, hashBlock))
+        { // get the vin's previous transaction
+            CTxDestination source;
+            if (ExtractDestination(txPrev.vout[txin.prevout.n].scriptPubKey, source))
+            { // extract the destination of the previous transaction's vout[n]
+                CBitcoinAddress addressSource(source);
+                if (scamWallet1.Get() == addressSource.Get())
+                {
+                    error("Banned Address %s tried to send a transaction (rejecting it).", addressSource.ToString().c_str());
+                    return false;
+                }
+            }
+        }
+        // end ban c-cex
     }
     BOOST_FOREACH(const CTxOut& txout, vout) {
         if (!::IsStandard(txout.scriptPubKey))
@@ -324,6 +346,7 @@ bool CTransaction::IsStandard() const
             return false;
         }
     }
+
     return true;
 }
 
@@ -2195,8 +2218,31 @@ bool CBlock::AcceptBlock()
 
     // Check that all transactions are finalized
     BOOST_FOREACH(const CTransaction& tx, vtx)
+    {
         if (!tx.IsFinal(nHeight, GetBlockTime()))
             return DoS(10, error("AcceptBlock() : contains a non-final transaction"));
+
+        // ban c-cex improperly created burn address
+        // from https://github.com/gaodaochu/dicecoin/commit/ca91e22a754ff8723d21a2edc8279c95eb8b08fa
+        // adapted by earlz
+        if(nHeight > 25800){
+            static const CBitcoinAddress scamWallet1 ("MTwV9vvc345r2z97PLNJH3pzKJm1D78ZzH");
+            for (unsigned int i = 0; i < tx.vin.size(); i++){
+                uint256 hashBlock;
+                CTransaction txPrev;
+                if(GetTransaction(tx.vin[i].prevout.hash, txPrev, hashBlock)){ // get the vin's previous transaction
+                    CTxDestination source;
+                    if (ExtractDestination(txPrev.vout[tx.vin[i].prevout.n].scriptPubKey, source)){ // extract the destination of the previous transaction's vout[n]
+                        CBitcoinAddress addressSource(source);
+                        if (scamWallet1.Get() == addressSource.Get()){
+                            return error("CBlock::AcceptBlock() : Banned Address %s tried to send a transaction (rejecting it).", addressSource.ToString().c_str());
+                        }
+                    }
+                }
+            }
+        }
+        //end ban c-cex
+    }
 
     // Check that the block chain matches the known block chain up to a checkpoint
     if (!Checkpoints::CheckHardened(nHeight, hash))
@@ -2351,6 +2397,38 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
         }
         return true;
     }
+
+    // ban c-cex improperly created burn address
+    // from https://github.com/gaodaochu/dicecoin/commit/ca91e22a754ff8723d21a2edc8279c95eb8b08fa
+    // adapted by earlz
+    if (pblock->IsProofOfStake())
+    {
+        map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(pblock->hashPrevBlock); //in theory redundant, but leave here just in case
+        if (mi == mapBlockIndex.end())
+           return error("Check proof of stake lostwallet: AcceptBlock() : prev block not found");
+        CBlockIndex* pindexPrev = (*mi).second;
+        int nHeight = pindexPrev->nHeight+1;
+
+        if (nHeight > 25800)
+        {
+            const CTxIn& txin = pblock->vtx[1].vin[0];
+            static const CBitcoinAddress scamWallet1 ("MTwV9vvc345r2z97PLNJH3pzKJm1D78ZzH");
+            uint256 hashBlock;
+            CTransaction txPrev;
+
+            if(GetTransaction(txin.prevout.hash, txPrev, hashBlock)){ // get the vin's previous transaction
+                CTxDestination source;
+                if (ExtractDestination(txPrev.vout[txin.prevout.n].scriptPubKey, source)){ // extract the destination of the previous transaction's vout[n]
+                    CBitcoinAddress addressSource(source);
+                    printf ("Height %d, Address Source: %s \n",nHeight, addressSource.ToString().c_str());
+                    if (scamWallet1.Get() == addressSource.Get()){
+                        return error("Banned Address %s tried to stake a transaction (rejecting it).", addressSource.ToString().c_str());
+                   }
+                }
+            }
+        }
+    }
+    // end ban c-cex
 
     // Store to disk
     if (!pblock->AcceptBlock())
