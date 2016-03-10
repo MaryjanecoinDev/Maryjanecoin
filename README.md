@@ -11,6 +11,6 @@ You will see appdata as a hidden folder, open it up and then open the roaming fo
 
 After pasting the folder run the qt from the other folder titled "maryjanecoin-qt", if it doesn't load the first time run the qt one more time and it should work.
 
-If you have any questions feel free to email me at MaryJanecoin@gmail.com or visit us on bitcointalk @ https://bitcointalk.org/index.php?topic=793704.0
+If you have any questions feel free to email me at MaryJanecoin@gmail.com or facebook https://www.facebook.com/Maryjanecoin-LLC-300461293471235/
 
 https://drive.google.com/file/d/0Bz1K3kq3Hq66b3BFRTJzTmVoUjg/view
